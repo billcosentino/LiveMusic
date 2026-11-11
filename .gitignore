@@ -1,0 +1,10 @@
+logs/
+data/*.tmp
+data/events-raw.json
+data/venue-status.json
+site/data.js
+site/all.ics
+node_modules/
+data/llm-cache.json
+.env
+.publish/

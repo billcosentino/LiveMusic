@@ -1,0 +1,7 @@
+[
+  { "name": "Infinity Music Hall and Bistro", "city": "Norfolk", "state": "CT", "website": "https://www.infinityhall.com/", "category": "music venue" },
+  { "name": "Toad's Place", "city": "New Haven", "state": "CT", "website": "https://toadsplace.com/", "category": "music venue" },
+  { "name": "Park City Music Hall", "city": "Bridgeport", "state": "CT", "website": "https://www.parkcitymusichall.com/", "category": "music venue" },
+  { "name": "Cafe Nine", "city": "New Haven", "state": "CT", "website": "https://www.cafenine.com/", "category": "music venue" },
+  { "name": "SHU Community Theatre", "city": "Fairfield", "state": "CT", "website": "https://www.shucommunitytheatre.org/", "category": "theater" }
+]

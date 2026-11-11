@@ -1,0 +1,20 @@
+{
+  "name": "gig-calendar",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Scrapes live-music events from venue websites in CT, NY and MA into a filterable calendar.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "venues": "node src/venues.js",
+    "scrape": "node src/scrape.js",
+    "build": "node src/build.js",
+    "all": "node src/venues.js --if-stale && node src/scrape.js && node src/build.js",
+    "serve": "node src/serve.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0"
+  }
+}
