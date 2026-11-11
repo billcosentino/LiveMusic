@@ -144,14 +144,19 @@ export function eventFromUrlAndTitle(html, url) {
   }
   if (!title) return [];
   // Start time from the title or URL, e.g. "8:00 PM" or "...-8-00-pm-...".
-  const tm = `${title} ${decodeURIComponent(new URL(url).pathname)}`.match(/(?:^|[^\d])(\d{1,2})(?:[:-](\d{2}))?\s*-?\s*(am|pm)\b/i);
+  const body = cleanText(html.replace(/<(script|style)\b[\s\S]*?<\/\1>/gi, ' '), 200000);
+  const tm = `${title} ${decodeURIComponent(new URL(url).pathname)}`.match(/(?:^|[^\d])(\d{1,2})(?:[:-](\d{2}))?\s*-?\s*(am|pm)\b/i)
+    || body.match(/\b(?:show(?:time)?|starts?|begins?|music|performance)\s*(?:at|time)?\s*:?\s*(\d{1,2})(?::(\d{2}))?\s*(a\.?m|p\.?m)\b/i)
+    || body.match(/\bdoors?\s*(?:open)?\s*(?:at)?\s*:?\s*(\d{1,2})(?::(\d{2}))?\s*(a\.?m|p\.?m)\b/i);
   let start = date, allDay = true;
   if (tm) {
-    let h = +tm[1] % 12 + (/pm/i.test(tm[3]) ? 12 : 0);
+    let h = +tm[1] % 12 + (/p/i.test(tm[3]) ? 12 : 0);
     if (h < 24) { start = `${date}T${String(h).padStart(2, '0')}:${tm[2] || '00'}`; allDay = false; }
   }
   // Drop a trailing " - Wednesday 11/11/2026 - 8:00 PM EDT" style suffix from the title.
   title = title.replace(/\s+-\s+(mon|tue|wed|thu|fri|sat|sun)[a-z]*\s+\d{1,2}\/\d{1,2}\/\d{2,4}.*$/i, '').trim() || title;
+  // Drop button/share text that some sites put inside the heading.
+  title = title.replace(/(\s*(share this event|share|buy tickets|get tickets|tickets|more info|add to calendar):?)+\s*$/i, '').trim() || title;
   return [{
     title, start, allDay, end: null, url,
     description: cleanText(meta('og:description') || meta('description') || '', 400),

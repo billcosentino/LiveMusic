@@ -67096,6 +67096,17 @@
    "address": "",
    "scrapable": true,
    "source": "manual"
+  },
+  {
+   "name": "Cafe Nine",
+   "city": "New Haven",
+   "state": "CT",
+   "website": "https://www.cafenine.com/",
+   "category": "music venue",
+   "id": "manual-ct-new-haven-cafe-nine",
+   "address": "",
+   "scrapable": true,
+   "source": "manual"
   }
  ]
 }
