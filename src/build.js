@@ -47,7 +47,7 @@ function main() {
       else { venueName = e.locName; city = e.locCity || city; state = region || state; venueId = `${v.id}:${norm(e.locName)}`; }
     }
     if (!STATES.includes(state)) { dropped++; continue; }
-    e.title = trimVenueSuffix(e.title, venueName, city);
+    e.title = trimVenueSuffix(e.title, venueName, city).replace(/^Get\s+(.+?)\s+Tickets$/i, '$1');
     const key = `${e.start.slice(0, 10)}|${norm(venueName).slice(0, 20)}|${norm(e.title).slice(0, 30)}`;
     if (seen.has(key)) {
       const prev = seen.get(key);
