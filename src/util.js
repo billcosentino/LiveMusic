@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const DATA = path.join(ROOT, 'data');
 export const SITE = path.join(ROOT, 'site');
-export const STATES = ['CT', 'NY', 'MA'];
+export const STATES = ['CT', 'NY', 'MA', 'NJ', 'RI', 'VT'];
 export const TZ = 'America/New_York';
 export const UA = 'GigCalendarBot/1.0 (+local live-music calendar; respects robots.txt)';
 

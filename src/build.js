@@ -4,7 +4,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { DATA, SITE, STATES, readJSON, norm, todayEastern, log } from './util.js';
 
-const REGION = { CT: 'CT', CONNECTICUT: 'CT', NY: 'NY', 'NEW YORK': 'NY', MA: 'MA', MASSACHUSETTS: 'MA' };
+const REGION = { CT: 'CT', CONNECTICUT: 'CT', NY: 'NY', 'NEW YORK': 'NY', MA: 'MA', MASSACHUSETTS: 'MA', NJ: 'NJ', 'NEW JERSEY': 'NJ', RI: 'RI', 'RHODE ISLAND': 'RI', VT: 'VT', VERMONT: 'VT' };
 
 const NON_MUSIC = /\b(trivia|bingo|quiz|paint(ing)?\b|sip\s*(&|and|n)\s*paint|yoga|pilates|brunch|class(es)?\b|workshop|seminar|meeting|market|craft fair|vendor|comedy|comedian|stand-?up|improv|film|movie|screening|book club|story ?time|kids?\b|closed|private (event|party)|run club|lecture|tour\b|auction|fundraiser gala|game night|board games?|drag brunch|magic show|play\b|musical\b|cinema|webinar|camp\b|lessons?\b)\b/i;
 const MUSIC = /\b(live|music|band|concert|acoustic|jazz|blues|rock|duo|trio|quartet|dj|open mic|orchestra|symphony|philharmonic|tribute|country|bluegrass|folk|funk|reggae|hip[- ]?hop|singer|songwriter|unplugged|jam\b|session|choir|chorale|soul|punk|metal|americana|ensemble|recital|piano|guitar|fiddle|celtic|irish music|motown|r&b|tour)\b/i;
@@ -41,7 +41,7 @@ function main() {
     // Event pages sometimes list shows at other locations (promoters, touring acts, multi-venue groups).
     if (e.locName && !overlaps(e.locName, v.name) && (e.locCity || e.locRegion)) {
       const region = REGION[String(e.locRegion).toUpperCase().trim()];
-      if (e.locRegion && !region) { dropped++; continue; } // outside CT/NY/MA
+      if (e.locRegion && !region) { dropped++; continue; } // outside the covered states
       const match = venues.find((x) => (!region || x.state === region) && overlaps(x.name, e.locName) && (!e.locCity || norm(x.city) === norm(e.locCity)));
       if (match) ({ name: venueName, city, state, id: venueId } = match);
       else { venueName = e.locName; city = e.locCity || city; state = region || state; venueId = `${v.id}:${norm(e.locName)}`; }
@@ -110,7 +110,7 @@ function icsStamp(s, allDay) {
 }
 export function toIcs(events) {
   const now = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
-  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//gig-calendar//EN', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:Live Music – CT/NY/MA', 'X-WR-TIMEZONE:America/New_York'];
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//gig-calendar//EN', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:Live Music – CT/NY/MA/NJ/RI/VT', 'X-WR-TIMEZONE:America/New_York'];
   for (const e of events) {
     lines.push('BEGIN:VEVENT', `UID:${e.id}@gig-calendar`, `DTSTAMP:${now}`, 'DTSTART' + icsStamp(e.start, e.allDay));
     if (!e.allDay) {

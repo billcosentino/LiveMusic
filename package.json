@@ -2,7 +2,7 @@
   "name": "gig-calendar",
   "version": "1.0.0",
   "private": true,
-  "description": "Scrapes live-music events from venue websites in CT, NY and MA into a filterable calendar.",
+  "description": "Scrapes live-music events from venue websites in CT, NY, MA, NJ, RI and VT into a filterable calendar.",
   "type": "module",
   "engines": {
     "node": ">=20"

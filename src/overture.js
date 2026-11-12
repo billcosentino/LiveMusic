@@ -1,6 +1,6 @@
 // Venues from Overture Maps Places (free, open data built from Meta, Microsoft and other business listings).
 // Much better than OpenStreetMap for bars, clubs and small music venues. Queried straight from Overture's public
-// S3 bucket with DuckDB, which reads only the CT/NY/MA slice of the files.
+// S3 bucket with DuckDB, which reads only the slice of the files covering our states.
 import { DATA, STATES, readJSON, writeJSON, log } from './util.js';
 import path from 'node:path';
 
@@ -29,7 +29,7 @@ async function latestRelease() {
 export async function overtureVenues() {
   const release = await latestRelease();
   const cached = readJSON(CACHE, null);
-  if (cached?.release === release) { log(`overture: using cached ${release}`); return cached.byState; }
+  if (cached?.release === release && cached.states === STATES.join(',')) { log(`overture: using cached ${release}`); return cached.byState; }
 
   log(`overture: querying release ${release} (takes a minute)…`);
   const { DuckDBInstance } = await import('@duckdb/node-api');
@@ -42,7 +42,7 @@ export async function overtureVenues() {
            addresses[1].locality AS city, addresses[1].region AS region, addresses[1].freeform AS address,
            basic_category AS cat, bbox.xmin AS lon, bbox.ymin AS lat
     FROM read_parquet('s3://overturemaps-us-west-2/release/${release}/theme=places/type=place/*', hive_partitioning=1)
-    WHERE bbox.xmin BETWEEN -79.8 AND -69.9 AND bbox.ymin BETWEEN 40.49 AND 45.02
+    WHERE bbox.xmin BETWEEN -79.8 AND -69.9 AND bbox.ymin BETWEEN 38.9 AND 45.02
       AND addresses[1].region IN (${STATES.map((s) => `'${s}'`).join(',')})
       AND basic_category IN (${cats})
       AND coalesce(operating_status, 'open') = 'open'
@@ -57,7 +57,7 @@ export async function overtureVenues() {
       website: r.website || null, source: 'overture',
     });
   }
-  writeJSON(CACHE, { release, byState });
+  writeJSON(CACHE, { release, states: STATES.join(','), byState });
   log(`overture: ${rows.length} venues (${STATES.map((s) => `${s} ${byState[s].length}`).join(', ')})`);
   return byState;
 }

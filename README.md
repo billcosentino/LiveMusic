@@ -1,6 +1,6 @@
-# Live Music Calendar: CT · NY · MA
+# Live Music Calendar: CT · NY · MA · NJ · RI · VT
 
-Finds music venues, bars, breweries and theaters across Connecticut, New York and Massachusetts, collects upcoming shows from their websites, and builds a filterable calendar with `.ics` export. It runs nightly on this PC.
+Finds music venues, bars, breweries and theaters across Connecticut, New York, Massachusetts, New Jersey, Rhode Island and Vermont, collects upcoming shows from their websites, and builds a filterable calendar with `.ics` export. It runs nightly on this PC.
 
 ## Quick start
 

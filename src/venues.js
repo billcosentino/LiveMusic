@@ -168,7 +168,7 @@ function mergeOverture(out, list) {
 }
 
 // ---------- Wikidata ----------
-const WD_STATE = { CT: 'Q779', NY: 'Q1384', MA: 'Q771' };
+const WD_STATE = { CT: 'Q779', NY: 'Q1384', MA: 'Q771', NJ: 'Q1408', RI: 'Q1387', VT: 'Q16551' };
 // music venue, concert hall, theatre (building), performing arts center, nightclub, amphitheatre, opera house, brewery, winery
 const WD_TYPES = ['Q8719053', 'Q1060829', 'Q24354', 'Q57660343', 'Q622425', 'Q181956', 'Q153562', 'Q131734', 'Q156362'];
 

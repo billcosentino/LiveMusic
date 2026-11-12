@@ -141,7 +141,7 @@
   function refreshOptions() {
     const multiState = state.st.size !== 1;
     state.st = ms.state.set(
-      tally(upcoming(baseFiltered({ ignoreState: true, ignoreCity: true, ignoreVenue: true })), (e) => e.state, (e) => ({ CT: 'Connecticut', NY: 'New York', MA: 'Massachusetts' }[e.state] || e.state), (e) => e.state),
+      tally(upcoming(baseFiltered({ ignoreState: true, ignoreCity: true, ignoreVenue: true })), (e) => e.state, (e) => ({ CT: 'Connecticut', NY: 'New York', MA: 'Massachusetts', NJ: 'New Jersey', RI: 'Rhode Island', VT: 'Vermont' }[e.state] || e.state), (e) => e.state),
       state.st);
     state.city = ms.city.set(
       tally(upcoming(baseFiltered({ ignoreCity: true, ignoreVenue: true })), cityKey, (e) => (multiState ? `${e.city}, ${e.state}` : e.city), (e) => e.city),
