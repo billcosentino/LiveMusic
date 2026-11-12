@@ -8,3 +8,5 @@ node_modules/
 data/llm-cache.json
 .env
 .publish/
+data/overture*
+ov-test.mjs

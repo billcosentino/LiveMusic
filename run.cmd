@@ -6,10 +6,8 @@ set LOG=logs\run-%TODAY%.log
 if not exist logs mkdir logs
 echo ==== %DATE% %TIME% ==== >> "%LOG%"
 node src\venues.js --if-stale >> "%LOG%" 2>&1
-node src\scrape.js >> "%LOG%" 2>&1
-rem If Node crashed partway, run again: venues already checked in the last 12h are skipped.
-if errorlevel 1 node src\scrape.js >> "%LOG%" 2>&1
-if errorlevel 1 node src\scrape.js >> "%LOG%" 2>&1
+rem run-scrape.js restarts the scraper if Node crashes partway; each restart resumes where it stopped.
+node src\run-scrape.js >> "%LOG%" 2>&1
 node src\build.js >> "%LOG%" 2>&1
 rem Push the rebuilt calendar to GitHub Pages (skipped quietly if there's no GitHub remote).
 git remote get-url origin >nul 2>&1 && node src\publish.js >> "%LOG%" 2>&1

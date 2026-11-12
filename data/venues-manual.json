@@ -3,5 +3,14 @@
   { "name": "Toad's Place", "city": "New Haven", "state": "CT", "website": "https://toadsplace.com/", "category": "music venue" },
   { "name": "Park City Music Hall", "city": "Bridgeport", "state": "CT", "website": "https://www.parkcitymusichall.com/", "category": "music venue" },
   { "name": "Cafe Nine", "city": "New Haven", "state": "CT", "website": "https://www.cafenine.com/", "category": "music venue" },
+  { "name": "Space Ballroom", "city": "Hamden", "state": "CT", "website": "https://spaceballroom.com/", "category": "music venue" },
+  { "name": "BSP Kingston", "city": "Kingston", "state": "NY", "website": "https://www.bspkingston.com/", "category": "music venue" },
+  { "name": "Rough Draft Bar & Books", "city": "Kingston", "state": "NY", "website": "https://www.roughdraftny.com/", "category": "bar" },
+  { "name": "Levon Helm Studios", "city": "Woodstock", "state": "NY", "website": "https://levonhelm.com/shows", "category": "music venue" },
+  { "name": "Opus 40", "city": "Saugerties", "state": "NY", "website": "https://www.opus40.org/", "category": "music venue" },
+  { "name": "Brooklyn Bowl", "city": "Brooklyn", "state": "NY", "website": "https://www.brooklynbowl.com/brooklyn", "category": "music venue" },
+  { "name": "Brooklyn Paramount", "city": "Brooklyn", "state": "NY", "website": "https://www.brooklynparamount.com/", "category": "music venue" },
+  { "name": "Barclays Center", "city": "Brooklyn", "state": "NY", "website": "https://www.barclayscenter.com/events", "category": "music venue" },
+  { "name": "Madison Square Garden", "city": "New York", "state": "NY", "website": "https://www.msg.com/madison-square-garden", "category": "music venue" },
   { "name": "SHU Community Theatre", "city": "Fairfield", "state": "CT", "website": "https://www.shucommunitytheatre.org/", "category": "theater" }
 ]

@@ -10,9 +10,9 @@ import { eventsFromJsonLd, scanLinks, tribeApiUrl, eventsFromTribe, eventsFromSq
 import { llmEnabled, extractWithClaude, pageText, looksLikeListing, saveLlmCache, llmCalls } from './llm.js';
 
 const WINDOW_DAYS = 120;      // how far ahead to keep events
-const CONCURRENCY = 12;       // venues processed in parallel (one request at a time per venue)
+const CONCURRENCY = 16;       // venues processed in parallel (one request at a time per venue)
 const MAX_LIST_PAGES = 4;     // event-list pages to try per venue
-const MAX_DETAIL_PAGES = 40;  // individual event / ticket pages to read when list pages don't carry the full lineup
+const MAX_DETAIL_PAGES = 60;  // individual event / ticket pages to read when list pages don't carry the full lineup
 const RECHECK_DAYS = 7;       // venues that yielded nothing are retried this often instead of nightly
 const PAGE_DELAY_MS = 400;    // pause between requests to the same site
 const LLM_MAX_CALLS = +arg('llm-max', process.env.GIG_LLM_MAX || 300); // cap on new Claude calls per run (cached pages are free)
@@ -211,7 +211,7 @@ async function main() {
     done++;
     if (r.events.length) { withEvents++; total += r.events.length; }
     if (r.events.length || done % 50 === 0) log(`[${done}/${run.length}] ${v.name} (${v.city}, ${v.state}): ${r.events.length} events${r.error ? ' — ' + r.error : ''}`);
-    if (done % 100 === 0) { writeJSON(STATUS, status); saveProgress(); }
+    if (done % 25 === 0) { writeJSON(STATUS, status); saveProgress(); }
   });
 
   writeJSON(STATUS, status);

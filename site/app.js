@@ -2,7 +2,7 @@
   const DATA = window.GIG_DATA || { events: [], counts: {}, updated: null };
   const EVENTS = DATA.events;
   const $ = (s) => document.querySelector(s);
-  const el = { state: $('#fState'), city: $('#fCity'), venue: $('#fVenue'), text: $('#fText'), music: $('#fMusic'), view: $('#view'), count: $('#count'), range: $('#rangeLabel') };
+  const el = { text: $('#fText'), music: $('#fMusic'), view: $('#view'), count: $('#count'), range: $('#rangeLabel') };
   const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const LIST_DAYS = 30;
@@ -26,25 +26,92 @@
   };
   const fmtDay = (s) => { const d = parse(s); return `${DOW[d.getDay()]}, ${MON[d.getMonth()].slice(0, 3)} ${d.getDate()}`; };
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const cityKey = (e) => `${e.state}|${e.city}`; // "Hudson" exists in both NY and MA
+
+  // ---------- multi-select dropdown ----------
+  // A button that opens a searchable checklist. items: [{ value, label, count }]; selection is a Set of values.
+  function MultiSelect(root, onChange) {
+    const label = root.dataset.label, allLabel = root.dataset.all;
+    root.innerHTML = `<span class="ms-label" id="${root.id}-l">${label}</span>
+      <button type="button" class="ms-btn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="${root.id}-l ${root.id}-t">
+        <span class="ms-text" id="${root.id}-t"></span><span class="ms-caret" aria-hidden="true">▾</span>
+      </button>
+      <div class="ms-pop" hidden>
+        <div class="ms-head"><input type="search" class="ms-search" placeholder="Search ${label.toLowerCase()}…" aria-label="Search ${label.toLowerCase()}" autocomplete="off"><button type="button" class="ms-clear">Clear</button></div>
+        <div class="ms-list" role="listbox" aria-multiselectable="true" aria-label="${label}"></div>
+      </div>`;
+    const btn = root.querySelector('.ms-btn'), pop = root.querySelector('.ms-pop'), list = root.querySelector('.ms-list');
+    const search = root.querySelector('.ms-search'), text = root.querySelector('.ms-text');
+    let items = [], selected = new Set();
+
+    const paintButton = () => {
+      const names = items.filter((i) => selected.has(i.value)).map((i) => i.short || i.label);
+      text.textContent = !names.length ? allLabel : names.length <= 2 ? names.join(', ') : `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
+      root.classList.toggle('active', names.length > 0);
+    };
+    const paintList = () => {
+      const q = search.value.trim().toLowerCase();
+      const shown = items.filter((i) => !q || i.label.toLowerCase().includes(q));
+      // Selected items first, so they're easy to find and uncheck.
+      shown.sort((a, b) => (selected.has(b.value) - selected.has(a.value)) || a.label.localeCompare(b.label));
+      list.innerHTML = shown.length
+        ? shown.map((i) => `<label class="ms-opt" role="option" aria-selected="${selected.has(i.value)}"><input type="checkbox" value="${esc(i.value)}"${selected.has(i.value) ? ' checked' : ''}><span>${esc(i.label)}</span><small>${i.count}</small></label>`).join('')
+        : `<div class="ms-none">No matches</div>`;
+    };
+    const open = (yes) => {
+      pop.hidden = !yes;
+      btn.setAttribute('aria-expanded', String(yes));
+      root.classList.toggle('open', yes);
+      if (yes) { search.value = ''; paintList(); if (matchMedia('(hover: hover)').matches) search.focus(); }
+    };
+
+    btn.addEventListener('click', () => open(pop.hidden));
+    search.addEventListener('input', paintList);
+    list.addEventListener('change', (ev) => {
+      const v = ev.target.value;
+      ev.target.checked ? selected.add(v) : selected.delete(v);
+      ev.target.closest('.ms-opt').setAttribute('aria-selected', String(ev.target.checked));
+      paintButton();
+      onChange(new Set(selected));
+    });
+    root.querySelector('.ms-clear').addEventListener('click', () => { selected.clear(); paintList(); paintButton(); onChange(new Set()); });
+    document.addEventListener('click', (ev) => { if (!root.contains(ev.target)) open(false); });
+    root.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { open(false); btn.focus(); } });
+
+    return {
+      /** Replace the options; keeps only selected values that still exist. Returns the cleaned selection. */
+      set(newItems, sel) {
+        items = newItems;
+        const valid = new Set(items.map((i) => i.value));
+        selected = new Set([...sel].filter((v) => valid.has(v)));
+        paintButton();
+        if (!pop.hidden) { const top = list.scrollTop; paintList(); list.scrollTop = top; }
+        return selected;
+      },
+    };
+  }
 
   // ---------- state (kept in the URL hash so filtered views can be bookmarked/shared) ----------
-  const state = { view: 'list', date: todayStr, st: '', city: '', venue: '', q: '', music: true };
+  const state = { view: 'list', date: todayStr, st: new Set(), city: new Set(), venue: new Set(), q: '', music: true };
   function readHash() {
     const p = new URLSearchParams(location.hash.slice(1));
     let savedView = null;
     try { savedView = localStorage.getItem('gig-view'); } catch {}
     state.view = ['list', 'week', 'month'].includes(p.get('view')) ? p.get('view') : savedView || (innerWidth < 720 ? 'list' : 'month');
     state.date = /^\d{4}-\d{2}-\d{2}$/.test(p.get('d') || '') ? p.get('d') : todayStr;
-    state.st = p.get('st') || ''; state.city = p.get('city') || ''; state.venue = p.get('venue') || '';
+    state.st = new Set(p.getAll('st'));
+    // Older links used city=Name; newer ones use city=ST|Name.
+    state.city = new Set(p.getAll('city').map((c) => (c.includes('|') ? c : (EVENTS.find((e) => e.city === c) ? cityKey(EVENTS.find((e) => e.city === c)) : c))));
+    state.venue = new Set(p.getAll('venue'));
     state.q = p.get('q') || ''; state.music = p.get('all') !== '1';
   }
   function writeHash() {
     const p = new URLSearchParams();
     p.set('view', state.view);
     if (state.date !== todayStr) p.set('d', state.date);
-    if (state.st) p.set('st', state.st);
-    if (state.city) p.set('city', state.city);
-    if (state.venue) p.set('venue', state.venue);
+    state.st.forEach((v) => p.append('st', v));
+    state.city.forEach((v) => p.append('city', v));
+    state.venue.forEach((v) => p.append('venue', v));
     if (state.q) p.set('q', state.q);
     if (!state.music) p.set('all', '1');
     history.replaceState(null, '', '#' + p.toString());
@@ -52,35 +119,36 @@
   }
 
   // ---------- filtering ----------
-  function baseFiltered({ ignoreCity, ignoreVenue } = {}) {
+  function baseFiltered({ ignoreState, ignoreCity, ignoreVenue } = {}) {
     const q = state.q.trim().toLowerCase();
     return EVENTS.filter((e) =>
       (!state.music || e.kind === 'music') &&
-      (!state.st || e.state === state.st) &&
-      (ignoreCity || !state.city || e.city === state.city) &&
-      (ignoreVenue || !state.venue || e.venueId === state.venue) &&
+      (ignoreState || !state.st.size || state.st.has(e.state)) &&
+      (ignoreCity || !state.city.size || state.city.has(cityKey(e))) &&
+      (ignoreVenue || !state.venue.size || state.venue.has(e.venueId)) &&
       (!q || `${e.title} ${e.venue} ${e.city} ${e.description}`.toLowerCase().includes(q)));
   }
-  function fillSelect(sel, items, current, allLabel) {
-    sel.innerHTML = `<option value="">${allLabel}</option>` + items.map(([v, label, n]) => `<option value="${esc(v)}"${v === current ? ' selected' : ''}>${esc(label)} (${n})</option>`).join('');
+  const upcoming = (list) => list.filter((e) => e.start.slice(0, 10) >= todayStr);
+  function tally(list, keyOf, labelOf, shortOf) {
+    const m = new Map();
+    for (const e of list) {
+      const k = keyOf(e);
+      const it = m.get(k) || { value: k, label: labelOf(e), short: shortOf?.(e), count: 0 };
+      it.count++; m.set(k, it);
+    }
+    return [...m.values()];
   }
   function refreshOptions() {
-    const upcoming = (list) => list.filter((e) => e.start.slice(0, 10) >= todayStr);
-    const cities = new Map();
-    for (const e of upcoming(baseFiltered({ ignoreCity: true, ignoreVenue: true }))) {
-      const k = e.city;
-      const c = cities.get(k) || [k, state.st ? k : `${k}, ${e.state}`, 0];
-      c[2]++; cities.set(k, c);
-    }
-    if (state.city && !cities.has(state.city)) state.city = '';
-    fillSelect(el.city, [...cities.values()].sort((a, b) => a[1].localeCompare(b[1])), state.city, 'All cities');
-    const venues = new Map();
-    for (const e of upcoming(baseFiltered({ ignoreVenue: true }))) {
-      const v = venues.get(e.venueId) || [e.venueId, state.city ? e.venue : `${e.venue} — ${e.city}`, 0];
-      v[2]++; venues.set(e.venueId, v);
-    }
-    if (state.venue && !venues.has(state.venue)) state.venue = '';
-    fillSelect(el.venue, [...venues.values()].sort((a, b) => a[1].localeCompare(b[1])), state.venue, 'All venues');
+    const multiState = state.st.size !== 1;
+    state.st = ms.state.set(
+      tally(upcoming(baseFiltered({ ignoreState: true, ignoreCity: true, ignoreVenue: true })), (e) => e.state, (e) => ({ CT: 'Connecticut', NY: 'New York', MA: 'Massachusetts' }[e.state] || e.state), (e) => e.state),
+      state.st);
+    state.city = ms.city.set(
+      tally(upcoming(baseFiltered({ ignoreCity: true, ignoreVenue: true })), cityKey, (e) => (multiState ? `${e.city}, ${e.state}` : e.city), (e) => e.city),
+      state.city);
+    state.venue = ms.venue.set(
+      tally(upcoming(baseFiltered({ ignoreVenue: true })), (e) => e.venueId, (e) => `${e.venue} — ${e.city}`, (e) => e.venue),
+      state.venue);
   }
 
   // ---------- rendering ----------
@@ -100,7 +168,7 @@
   }
   function render() {
     refreshOptions();
-    el.state.value = state.st; el.text.value = state.q; el.music.checked = state.music;
+    el.text.value = state.q; el.music.checked = state.music;
     document.querySelectorAll('.seg button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.view === state.view)));
     const [from, to, mFirst, mLast] = range();
     const all = baseFiltered();
@@ -111,6 +179,7 @@
     if (state.view === 'month') el.range.textContent = `${MON[parse(mFirst).getMonth()]} ${parse(mFirst).getFullYear()}`;
     else el.range.textContent = `${fmtDay(from)} – ${fmtDay(to)}`;
     el.count.textContent = `${current.length} event${current.length === 1 ? '' : 's'} shown`;
+    $('#clearAll').hidden = !(state.st.size || state.city.size || state.venue.size || state.q);
 
     if (!EVENTS.length) { el.view.innerHTML = `<div class="empty">No events yet. Run <code>run.cmd</code> to collect them.</div>`; return; }
     if (state.view === 'list') renderList(days, from, to);
@@ -128,7 +197,7 @@
           <span class="where">${esc(e.venue)} · ${esc(e.city)}, ${e.state}${e.price ? ' · ' + esc(/^\d/.test(e.price) ? '$' + e.price : e.price) : ''}</span>
         </div>`).join('') + '</section>';
     }
-    el.view.innerHTML = html || `<div class="empty">No shows match these filters between ${fmtDay(from)} and ${fmtDay(to)}.<br>Try another state or city, or clear the search.</div>`;
+    el.view.innerHTML = html || `<div class="empty">No shows match these filters between ${fmtDay(from)} and ${fmtDay(to)}.<br>Try more places, or clear the search.</div>`;
   }
   function renderGrid(days, from, to, mFirst, mLast) {
     const isMonth = state.view === 'month';
@@ -191,12 +260,15 @@
 
   // ---------- events ----------
   const byId = new Map(EVENTS.map((e) => [e.id, e]));
-  el.state.onchange = () => { state.st = el.state.value; state.city = ''; state.venue = ''; render(); };
-  el.city.onchange = () => { state.city = el.city.value; state.venue = ''; render(); };
-  el.venue.onchange = () => { state.venue = el.venue.value; render(); };
+  const ms = {
+    state: MultiSelect($('#fState'), (sel) => { state.st = sel; render(); }),
+    city: MultiSelect($('#fCity'), (sel) => { state.city = sel; render(); }),
+    venue: MultiSelect($('#fVenue'), (sel) => { state.venue = sel; render(); }),
+  };
   el.music.onchange = () => { state.music = el.music.checked; render(); };
   let t;
   el.text.oninput = () => { clearTimeout(t); t = setTimeout(() => { state.q = el.text.value; render(); }, 180); };
+  $('#clearAll').onclick = () => { state.st = new Set(); state.city = new Set(); state.venue = new Set(); state.q = ''; render(); };
   document.querySelectorAll('.seg button').forEach((b) => (b.onclick = () => { state.view = b.dataset.view; render(); }));
   const step = (dir) => {
     if (state.view === 'list') state.date = add(state.date, dir * LIST_DAYS);
@@ -209,8 +281,8 @@
   $('#today').onclick = () => { state.date = todayStr; render(); };
   $('#exportBtn').onclick = () => {
     if (!current.length) return alert('No events in the current view to export.');
-    const label = [state.st, state.city, state.venue && byId.get(current[0]?.id)?.venue].filter(Boolean).join(' ') || 'live-music';
-    download(current, `${label} ${el.range.textContent}.ics`);
+    const places = [...state.st, ...[...state.city].map((c) => c.split('|')[1])].slice(0, 3).join(' ') || 'live-music';
+    download(current, `${places} ${el.range.textContent}.ics`);
   };
   el.view.addEventListener('click', (ev) => {
     const item = ev.target.closest('[data-id]');

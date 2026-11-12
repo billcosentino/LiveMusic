@@ -18,7 +18,7 @@ function classify(e, venue) {
   if (NON_MUSIC.test(text)) return 'other';
   if (/TheaterEvent|ComedyEvent|ScreeningEvent|EducationEvent|SportsEvent|FoodEvent|ChildrensEvent/i.test(types)) return 'other';
   // Bars, breweries and music venues mostly list band names as bare titles; theaters mostly don't.
-  return ['theater', 'restaurant', 'event space'].includes(venue.category) ? 'other' : 'music';
+  return ['theater', 'restaurant', 'event space', 'comedy'].includes(venue.category) ? 'other' : 'music';
 }
 
 function overlaps(a, b) {
@@ -47,6 +47,7 @@ function main() {
       else { venueName = e.locName; city = e.locCity || city; state = region || state; venueId = `${v.id}:${norm(e.locName)}`; }
     }
     if (!STATES.includes(state)) { dropped++; continue; }
+    e.title = trimVenueSuffix(e.title, venueName, city);
     const key = `${e.start.slice(0, 10)}|${norm(venueName).slice(0, 20)}|${norm(e.title).slice(0, 30)}`;
     if (seen.has(key)) {
       const prev = seen.get(key);
@@ -78,6 +79,21 @@ function main() {
   fs.writeFileSync(path.join(SITE, 'data.js'), 'window.GIG_DATA = ' + JSON.stringify(payload) + ';\n');
   fs.writeFileSync(path.join(SITE, 'all.ics'), toIcs(events));
   log(`built ${events.length} events at ${counts.venuesWithEvents} venues (${raw.length} raw, ${dropped} dropped, ${raw.length - dropped - events.length} duplicates) → site/data.js, site/all.ics`);
+}
+
+/** "Pokey LaFarge — Assembly - Kingston, NY" -> "Pokey LaFarge" (drops a trailing venue/city part). */
+function trimVenueSuffix(title, venueName, city) {
+  const parts = title.split(/\s+(?:[|–—•@]|-|at)\s+/i);
+  if (parts.length < 2) return title;
+  const v = norm(venueName), c = norm(city);
+  for (let i = 1; i < parts.length; i++) {
+    const p = norm(parts[i]);
+    if (p && ((v.length >= 4 && (p.includes(v) || v.includes(p))) || (c && p.startsWith(c)))) {
+      const kept = title.slice(0, title.indexOf(parts[i])).replace(/\s+(?:[|–—•@]|-|at)\s*$/i, '').replace(/\s*[-–—]\s*live$/i, '').trim();
+      return kept.length >= 2 ? kept : title;
+    }
+  }
+  return title;
 }
 
 function absolutize(u, base) {

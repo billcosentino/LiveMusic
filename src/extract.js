@@ -77,6 +77,7 @@ export function scanLinks(html, baseUrl) {
     let u;
     try { u = new URL(raw, base); } catch { continue; }
     if (!/^https?:$/.test(u.protocol) || SKIP_EXT.test(u.pathname)) continue;
+    if (/[?&]format=(ical|json)/i.test(u.search)) continue; // Squarespace per-event exports; disallowed by its robots.txt
     if (/\.ics$/i.test(u.pathname) || /[?&](ical|outlook-ical)=1/i.test(u.search)) { ics.add(u.href); continue; }
     if (/calendar\.google\.com/i.test(u.hostname)) { addGcal(u, gcal); continue; }
     if (TICKET_HOSTS.test(u.hostname) && u.pathname.length > 3) { u.hash = ''; tickets.add(u.href); continue; }
@@ -130,14 +131,42 @@ export function dateFromUrl(url) {
   return null;
 }
 
-/** Fallback for event pages without structured data: date from the URL, title from og:title / <h1> / <title>. */
+const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+
+/** First full written date on a page ("Wed, Nov 11, 2026", "November 11 2026", "11/11/2026"), skipping nav/header/footer. */
+export function dateFromText(html) {
+  const main = html.replace(/<(script|style|nav|header|footer|noscript)\b[\s\S]*?<\/\1>/gi, ' ');
+  const text = cleanText(main, 60000);
+  const valid = (y, mo, d) => (mo >= 1 && mo <= 12 && d >= 1 && d <= 31 ? `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}` : null);
+  let m = text.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(20\d{2})\b/i);
+  if (m) return valid(+m[3], MONTHS[m[1].toLowerCase()], +m[2]);
+  m = text.match(/\b(\d{1,2})\/(\d{1,2})\/(20\d{2})\b/);
+  if (m) return valid(+m[3], +m[1], +m[2]);
+  return null;
+}
+
+/** Fallback for event pages without structured data: date from the URL (or the page text), title from og:title / <h1> / <title>. */
 export function eventFromUrlAndTitle(html, url) {
-  const date = dateFromUrl(url);
+  const date = dateFromUrl(url) || dateFromText(html);
   if (!date) return [];
   const meta = (p) => html.match(new RegExp(`<meta[^>]+(?:property|name)=["']${p}["'][^>]+content=["']([^"']+)["']`, 'i'))?.[1]
     || html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${p}["']`, 'i'))?.[1];
-  let title = meta('og:title') || html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1] || html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || '';
-  title = cleanText(title, 200).split(/\s+[|–—]\s+/)[0].trim();
+  // Candidates in order of preference; pick the first that shares a word with the URL slug, since some sites
+  // use their own name as og:title on every page.
+  const candidates = [meta('og:title'), ...[...html.matchAll(/<h[12][^>]*>([\s\S]*?)<\/h[12]>/gi)].slice(0, 6).map((m) => m[1]), html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]]
+    .filter(Boolean).map((t) => cleanText(t, 200).split(/\s+[|–—]\s+/)[0].trim()).filter((t) => t.length >= 2);
+  const slugWords = (decodeURIComponent(new URL(url).pathname.split('/').filter(Boolean).pop() || '').toLowerCase().match(/[a-z]{3,}/g) || [])
+    .filter((w) => !/^(the|and|with|show|event|events|tickets|live|night)$/.test(w));
+  let title = slugWords.length ? candidates.find((t) => slugWords.some((w) => t.toLowerCase().includes(w))) : candidates[0];
+  if (!title && slugWords.length >= 1) {
+    // Find the slug's words in the page text to recover the original capitalization ("mick-flannery-3" -> "Mick Flannery").
+    const words = (decodeURIComponent(new URL(url).pathname.split('/').filter(Boolean).pop() || '').match(/[a-z0-9']+/gi) || [])
+      .filter((w, i, a) => !(i === a.length - 1 && /^\d{1,2}$/.test(w)));
+    const re = new RegExp(words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join("[^A-Za-z0-9]{1,6}"), 'i');
+    const found = cleanText(html.replace(/<(script|style)\b[\s\S]*?<\/\1>/gi, ' '), 100000).match(re)?.[0];
+    title = found || words.join(' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  title = (title || candidates[0] || '').replace(/^(get|buy)\s+(.+?)\s+tickets\b.*$/i, '$2').split(/\s+•\s+/)[0].trim();
   if (title.length < 2) {
     title = decodeURIComponent(new URL(url).pathname.split('/').filter(Boolean).pop() || '')
       .replace(/\d{1,4}[-_]\d{1,2}[-_]\d{1,4}/g, '').replace(/[-_]+/g, ' ').trim().replace(/\b\w/g, (c) => c.toUpperCase());

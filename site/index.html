@@ -24,19 +24,14 @@
   </header>
 
   <section class="filters wrap" aria-label="Filters">
-    <label>State
-      <select id="fState"><option value="">All states</option><option>CT</option><option>NY</option><option>MA</option></select>
-    </label>
-    <label>City
-      <select id="fCity"><option value="">All cities</option></select>
-    </label>
-    <label>Venue
-      <select id="fVenue"><option value="">All venues</option></select>
-    </label>
+    <div class="ms" id="fState" data-label="State" data-all="All states"></div>
+    <div class="ms" id="fCity" data-label="City" data-all="All cities"></div>
+    <div class="ms" id="fVenue" data-label="Venue" data-all="All venues"></div>
     <label class="grow">Search
       <input id="fText" type="search" placeholder="Band, venue, genre…" autocomplete="off" />
     </label>
     <label class="check"><input id="fMusic" type="checkbox" checked /> Music only</label>
+    <button id="clearAll" class="linkbtn" type="button" hidden>Clear filters</button>
   </section>
 
   <nav class="toolbar wrap" aria-label="Calendar view">

@@ -5,6 +5,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { DATA, STATES, UA, arg, readJSON, writeJSON, log, slug } from './util.js';
+import { overtureVenues } from './overture.js';
+
+let overture = null; // filled in main()
 
 const OUT = path.join(DATA, 'venues.json');
 const MANUAL = path.join(DATA, 'venues-manual.json');
@@ -12,7 +15,7 @@ const ENDPOINTS = ['https://overpass-api.de/api/interpreter', 'https://overpass.
 const STALE_DAYS = 7;
 
 // Sites that block scraping or forbid it in their terms; venues whose only site is one of these are kept but not scraped.
-const BLOCKED_HOSTS = /(^|\.)(facebook\.com|fb\.com|instagram\.com|twitter\.com|x\.com|tiktok\.com|yelp\.com|tripadvisor\.com|linktr\.ee)$/i;
+const BLOCKED_HOSTS = /(^|\.)(facebook\.com|fb\.com|instagram\.com|twitter\.com|x\.com|tiktok\.com|yelp\.com|tripadvisor\.com|linktr\.ee|clicklinkin\.bio|linkin\.bio|lnk\.bio|beacons\.ai|campsite\.bio|solo\.to)$/i;
 
 function venueQuery(st) {
   return `[out:json][timeout:300];
@@ -119,8 +122,49 @@ async function buildState(st) {
   }
   await fillFromWikidataTags(out);
   out.push(...(await wikidataVenues(st, out, places)));
+  if (overture?.[st]) mergeOverture(out, overture[st]);
   log(`${st}: ${out.length} named venues, ${out.filter((v) => v.scrapable).length} with a scrapable website`);
   return out;
+}
+
+/** Add Overture venues, matching ones OSM already has (same website, or same name within ~250 m) to fill gaps. */
+function mergeOverture(out, list) {
+  const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, '').toLowerCase(); } catch { return null; } };
+  const cell = (lat, lon) => `${Math.round(lat * 200)}:${Math.round(lon * 200)}`; // ~500 m cells
+  const byHost = new Map(), grid = new Map();
+  const index = (v) => {
+    const h = v.website && host(v.website);
+    if (h && !BLOCKED_HOSTS.test(h)) byHost.set(h, v);
+    const k = cell(v.lat, v.lon);
+    (grid.get(k) || grid.set(k, []).get(k)).push(v);
+  };
+  out.forEach(index);
+  let added = 0, filled = 0;
+  for (const o of list) {
+    const website = cleanUrl(o.website);
+    const h = website && host(website);
+    let match = h && !BLOCKED_HOSTS.test(h) ? byHost.get(h) : null;
+    if (!match) {
+      const [a, b] = cell(o.lat, o.lon).split(':').map(Number);
+      const k = Math.cos((o.lat * Math.PI) / 180);
+      outer: for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) {
+        for (const v of grid.get(`${a + i}:${b + j}`) || []) {
+          if ((v.lat - o.lat) ** 2 + ((v.lon - o.lon) * k) ** 2 < 0.0000056 && namesMatch(v.name, o.name)) { match = v; break outer; }
+        }
+      }
+    }
+    if (match) {
+      if (!match.website && website) { match.website = website; match.scrapable = !BLOCKED_HOSTS.test(h); filled++; }
+      if (o.category === 'music venue') { match.category = 'music venue'; match.liveMusic = true; }
+      if (!match.address && o.address) match.address = o.address;
+      continue;
+    }
+    const v = { ...o, website, scrapable: !!website && !BLOCKED_HOSTS.test(h), liveMusic: o.category === 'music venue' };
+    out.push(v);
+    index(v);
+    added++;
+  }
+  log(`  overture: ${added} venues added, ${filled} websites filled`);
 }
 
 // ---------- Wikidata ----------
@@ -204,6 +248,7 @@ async function main() {
   const states = only ? [String(only).toUpperCase()] : STATES;
   const previous = readJSON(OUT, { venues: [] }).venues;
   let venues = previous.filter((v) => v.source !== 'manual' && !states.includes(v.state));
+  try { overture = await overtureVenues(); } catch (e) { log(`overture: FAILED (${e.message}); continuing with OSM + Wikidata only`); }
   for (const st of states) {
     try {
       venues.push(...(await buildState(st)));
