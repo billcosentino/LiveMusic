@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Live Music Calendar</title>
+  <meta name="description" content="Upcoming live music at venues across Connecticut, New York, Massachusetts, New Jersey, Rhode Island and Vermont." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <div class="brand">
+        <h1>Live Music <span>CT · NY · MA · NJ · RI · VT</span></h1>
+        <p id="meta" class="meta">Loading…</p>
+      </div>
+      <div class="actions">
+        <button id="exportBtn" class="btn primary" type="button">Export .ics</button>
+        <a class="btn" href="all.ics" download>Everything (.ics)</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="filters wrap" aria-label="Filters">
+    <div class="ms" id="fState" data-label="State" data-all="All states"></div>
+    <div class="ms" id="fCity" data-label="City" data-all="All cities"></div>
+    <div class="ms" id="fVenue" data-label="Venue" data-all="All venues"></div>
+    <label class="grow">Search
+      <input id="fText" type="search" placeholder="Band, venue, genre…" autocomplete="off" />
+    </label>
+    <label class="check"><input id="fMusic" type="checkbox" checked /> Music only</label>
+    <button id="clearAll" class="linkbtn" type="button" hidden>Clear filters</button>
+  </section>
+
+  <nav class="toolbar wrap" aria-label="Calendar view">
+    <div class="seg" role="tablist">
+      <button type="button" data-view="list" role="tab">List</button>
+      <button type="button" data-view="week" role="tab">Week</button>
+      <button type="button" data-view="month" role="tab">Month</button>
+    </div>
+    <div class="pager">
+      <button id="prev" class="btn icon" type="button" aria-label="Previous">‹</button>
+      <button id="today" class="btn" type="button">Today</button>
+      <button id="next" class="btn icon" type="button" aria-label="Next">›</button>
+      <strong id="rangeLabel"></strong>
+    </div>
+    <span id="count" class="count"></span>
+  </nav>
+
+  <main id="view" class="wrap"></main>
+
+  <dialog id="detail">
+    <form method="dialog"><button class="close" aria-label="Close">×</button></form>
+    <div id="detailBody"></div>
+  </dialog>
+
+  <footer class="wrap foot">
+    Collected nightly from venue websites (structured event data, WordPress and Squarespace calendars, and public iCal feeds).
+    Venues that post only on Facebook or Instagram aren't covered. Always confirm with the venue before heading out.
+  </footer>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
